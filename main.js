@@ -1,3 +1,3 @@
 import aframe from 'aframe';
-import clickDragComponent from '../index';
+import clickDragComponent from '../src/index';
 clickDragComponent(aframe);
