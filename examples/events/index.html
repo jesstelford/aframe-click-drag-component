@@ -1,0 +1,30 @@
+<html>
+  <head>
+    <title>A-Frame Click & Drag Component - Events</title>
+    <script src="../build.js"></script>
+  </head>
+  <body>
+    <a-scene>
+
+      <a-sphere
+        click-drag
+        position="0 1.25 -1"
+        radius="1.25"
+        color="#EF2D5E"
+        event-set__1="_event: dragstart; material.opacity: 0.2"
+        event-set__1="_event: dragend; material.opacity: 1"
+      >
+      <a-animation attribute="material.opacity" begin="dragstart" from="1.0" to="0.2" dur="200"></a-animation>
+      <a-animation attribute="material.opacity" begin="dragend" from="0.2" to="1.0" dur="200"></a-animation>
+      </a-sphere>
+
+      <a-plane rotation="-90 0 0" width="4" height="4" color="#7BC8A4"></a-plane>
+
+      <a-sky color="#ECECEC"></a-sky>
+
+      <a-entity position="0 0 3.8">
+        <a-camera look-controls-enabled="false"></a-camera>
+      </a-entity>
+    </a-scene>
+  </body>
+</html>
