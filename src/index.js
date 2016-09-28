@@ -1,9 +1,13 @@
 import deepEqual from 'deep-equal';
+import linearRegression from 'simple-statistics/src/linear_regression';
+import linearRegressionLine from 'simple-statistics/src/linear_regression_line';
 
 const COMPONENT_NAME = 'click-drag';
 const DRAG_START_EVENT = 'dragstart';
 const DRAG_MOVE_EVENT = 'dragmove';
 const DRAG_END_EVENT = 'dragend';
+
+const TIME_TO_KEEP_LOG = 300;
 
 function cameraPositionToVec3(camera, vec3) {
 
@@ -339,6 +343,24 @@ const {initialize, tearDown} = (function closeOverInitAndTearDown() {
       let removeDragListeners;
       let draggedElement;
       let dragInfo;
+      const positionLog = [];
+
+      function cleanUpPositionLog() {
+        const now = performance.now();
+        while (positionLog.length && now - positionLog[0].time > TIME_TO_KEEP_LOG) {
+          // remove the first element;
+          positionLog.shift();
+        }
+      }
+
+      function onDragged({detail: {nextPosition}}) {
+        // Continuously clean up so we don't get huge logs built up
+        cleanUpPositionLog();
+        positionLog.push({
+          position: Object.assign({}, nextPosition),
+          time: performance.now(),
+        });
+      }
 
       function onMouseDown({clientX, clientY}) {
 
@@ -347,7 +369,17 @@ const {initialize, tearDown} = (function closeOverInitAndTearDown() {
         if (element) {
           // Can only drag one item at a time, so no need to check if any
           // listener is already set up
-          removeDragListeners = dragItem(THREE, element, offset, camera, depth, {clientX, clientY});
+          let removeDragItemListeners = dragItem(
+            THREE,
+            element,
+            offset,
+            camera,
+            depth,
+            {
+              clientX,
+              clientY,
+            }
+          );
 
           draggedElement = element;
 
@@ -359,12 +391,71 @@ const {initialize, tearDown} = (function closeOverInitAndTearDown() {
           };
 
           element.emit(DRAG_START_EVENT, dragInfo);
+
+          element.addEventListener(DRAG_MOVE_EVENT, onDragged);
+
+          removeDragListeners = _ => {
+            element.removeEventListener(DRAG_MOVE_EVENT, onDragged);
+            // eslint-disable-next-line no-unused-expressions
+            removeDragItemListeners && removeDragItemListeners();
+            // in case this removal function gets called more than once
+            removeDragItemListeners = null;
+          };
         }
+      }
+
+      function fitLineToVelocity(dimension) {
+
+        if (positionLog.length < 2) {
+          return 0;
+        }
+
+        const velocities = positionLog
+
+          // Pull out just the x, y, or z values
+          .map(log => ({time: log.time, value: log.position[dimension]}))
+
+          // Then convert that into an array of array pairs [time, value]
+          .reduce((memo, log, index, collection) => {
+
+            // skip the first item (we're looking for pairs)
+            if (index === 0) {
+              return memo;
+            }
+
+            const deltaPosition = log.value - collection[index - 1].value;
+            const deltaTime = (log.time - collection[index - 1].time) / 1000;
+
+            // The new value is the change in position
+            memo.push([log.time, deltaPosition / deltaTime]);
+
+            return memo;
+
+          }, []);
+
+        // Calculate the line function
+        const lineFunction = linearRegressionLine(linearRegression(velocities));
+
+        // Calculate what the point was at the end of the line
+        // ie; the velocity at the time the drag stopped
+        return lineFunction(positionLog[positionLog.length - 1].time);
       }
 
       function onMouseUp({clientX, clientY}) {
 
-        draggedElement.emit(DRAG_END_EVENT, Object.assign({}, dragInfo, {clientX, clientY}));
+        cleanUpPositionLog();
+
+        const velocity = {
+          x: fitLineToVelocity('x'),
+          y: fitLineToVelocity('y'),
+          z: fitLineToVelocity('z'),
+        };
+
+        draggedElement.emit(
+          DRAG_END_EVENT,
+          Object.assign({}, dragInfo, {clientX, clientY, velocity})
+        );
+
         removeDragListeners && removeDragListeners(); // eslint-disable-line no-unused-expressions
         removeDragListeners = undefined;
       }
@@ -487,4 +578,4 @@ export default function aframeDraggableComponent(aframe, componentName = COMPONE
       didMount(this, THREE, componentName);
     },
   });
-};
+}
