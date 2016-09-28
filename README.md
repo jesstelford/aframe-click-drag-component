@@ -7,6 +7,36 @@ scene. Even works whle the camera is moving!
 
 _Note: entities are not positioned correctly when the camera is rotated._
 
+### Events
+
+**dragstart**
+
+Emitted with the following info:
+
+- `offset: {x, y, z}` - The offset from entity center to drag position.
+- `depth` - the perpendicular distance from the screen to align the entity while
+  dragging
+- `clientX` - the mouse event's `clientX` value
+- `clientY` - the mouse event's `clientY` value
+
+**dragmove**
+
+Emitted with the following info:
+
+- `nextPosition: {x, y, z}` - The next world position of the entity.
+- `clientX` - the mouse event's `clientX` value
+- `clientY` - the mouse event's `clientY` value
+
+**dragend**
+
+Emitted with the following info:
+
+- `offset: {x, y, z}` - The offset from entity center to drag position.
+- `depth` - the perpendicular distance from the screen to align the entity while
+  dragging
+- `clientX` - the final mouse event's `clientX` value
+- `clientY` - the final mouse event's `clientY` value
+
 ### Installation
 
 #### Browser
