@@ -1,6 +1,9 @@
 import deepEqual from 'deep-equal';
 
 const COMPONENT_NAME = 'click-drag';
+const DRAG_START_EVENT = 'dragstart';
+const DRAG_MOVE_EVENT = 'dragmove';
+const DRAG_END_EVENT = 'dragend';
 
 function cameraPositionToVec3(camera, vec3) {
 
@@ -298,7 +301,11 @@ function dragItem(THREE, element, offset, camera, depth, mouseInfo) {
       depth
     );
 
-    element.setAttribute('position', {x: x - offsetX, y: y - offsetY, z: z - offsetZ});
+    const nextPosition = {x: x - offsetX, y: y - offsetY, z: z - offsetZ};
+
+    element.emit(DRAG_MOVE_EVENT, {nextPosition, clientX, clientY});
+
+    element.setAttribute('position', nextPosition);
   }
 
   function onCameraMove({detail}) {
@@ -330,6 +337,8 @@ const {initialize, tearDown} = (function closeOverInitAndTearDown() {
       // delay loading of this as we're not 100% if the scene has loaded yet or not
       let camera;
       let removeDragListeners;
+      let draggedElement;
+      let dragInfo;
 
       function onMouseDown({clientX, clientY}) {
 
@@ -339,10 +348,23 @@ const {initialize, tearDown} = (function closeOverInitAndTearDown() {
           // Can only drag one item at a time, so no need to check if any
           // listener is already set up
           removeDragListeners = dragItem(THREE, element, offset, camera, depth, {clientX, clientY});
+
+          draggedElement = element;
+
+          dragInfo = {
+            offset: {x: offset.x, y: offset.y, z: offset.z},
+            depth,
+            clientX,
+            clientY,
+          };
+
+          element.emit(DRAG_START_EVENT, dragInfo);
         }
       }
 
-      function onMouseUp() {
+      function onMouseUp({clientX, clientY}) {
+
+        draggedElement.emit(DRAG_END_EVENT, Object.assign({}, dragInfo, {clientX, clientY}));
         removeDragListeners && removeDragListeners(); // eslint-disable-line no-unused-expressions
         removeDragListeners = undefined;
       }
