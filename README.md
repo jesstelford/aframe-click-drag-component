@@ -32,6 +32,7 @@ Emitted with the following info:
 Emitted with the following info:
 
 - `offset: {x, y, z}` - The offset from entity center to drag position.
+- `velocity: {x, y, z}` - The smoothed velocity of the entity at dragend time.
 - `depth` - the perpendicular distance from the screen to align the entity while
   dragging
 - `clientX` - the final mouse event's `clientX` value
