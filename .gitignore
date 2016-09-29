@@ -1,5 +1,7 @@
 dist/
 lib/
+rollup.config.js
+
 .sw[ponm]
 examples/build.js
 examples/node_modules/
