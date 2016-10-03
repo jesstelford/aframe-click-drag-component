@@ -292,7 +292,15 @@ const {selectItem} = (function selectItemFunction() {
 function dragItem(THREE, element, offset, camera, depth, mouseInfo) {
 
   const {x: offsetX, y: offsetY, z: offsetZ} = offset;
-  const lastCameraRotation = camera.components.camera.camera.rotation.clone();
+  const threeCamera = camera.components.camera.camera;
+
+  // Setting up for rotation calculations
+  const startCameraRotationInverse = threeCamera.getWorldQuaternion().inverse();
+  const startElementRotation = element.object3D.getWorldQuaternion();
+  const elementRotationOrder = element.object3D.rotation.order;
+
+  const rotationQuaternion = new THREE.Quaternion();
+  const rotationEuler = new THREE.Euler();
   let lastMouseInfo = mouseInfo;
 
   function onMouseMove({clientX, clientY}) {
@@ -313,11 +321,33 @@ function dragItem(THREE, element, offset, camera, depth, mouseInfo) {
       depth
     );
 
+    // 1. Store initial element rotation
+    // 2. Store initial camera rotation
+    // 3. Calculate difference in camera rotation, inverted
+    // 4. Add #3 + #1
+    // 5. Set element rotation to #4
+
+    // Start by rotating backwards from the initial camera rotation
+    const rotationDiff = rotationQuaternion.copy(startCameraRotationInverse)
+      // Then add the current camera rotation
+      .multiply(threeCamera.getWorldQuaternion())
+      // And correctly offset rotation
+      .multiply(startElementRotation);
+
+    rotationEuler.setFromQuaternion(rotationDiff, elementRotationOrder);
+
+    const nextRotation = {
+      x: THREE.Math.radToDeg(rotationEuler.x),
+      y: THREE.Math.radToDeg(rotationEuler.y),
+      z: THREE.Math.radToDeg(rotationEuler.z),
+    };
+
     const nextPosition = {x: x - offsetX, y: y - offsetY, z: z - offsetZ};
 
-    element.emit(DRAG_MOVE_EVENT, {nextPosition, clientX, clientY});
+    element.emit(DRAG_MOVE_EVENT, {nextPosition, nextRotation, clientX, clientY});
 
     element.setAttribute('position', nextPosition);
+    element.setAttribute('rotation', nextRotation);
   }
 
   function onCameraChange({detail}) {
