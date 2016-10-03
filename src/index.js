@@ -292,6 +292,7 @@ const {selectItem} = (function selectItemFunction() {
 function dragItem(THREE, element, offset, camera, depth, mouseInfo) {
 
   const {x: offsetX, y: offsetY, z: offsetZ} = offset;
+  const lastCameraRotation = camera.components.camera.camera.rotation.clone();
   let lastMouseInfo = mouseInfo;
 
   function onMouseMove({clientX, clientY}) {
@@ -319,19 +320,22 @@ function dragItem(THREE, element, offset, camera, depth, mouseInfo) {
     element.setAttribute('position', nextPosition);
   }
 
-  function onCameraMove({detail}) {
-    if (detail.name === 'position' && !deepEqual(detail.oldData, detail.newData)) {
+  function onCameraChange({detail}) {
+    if (
+      (detail.name === 'position' || detail.name === 'rotation')
+      && !deepEqual(detail.oldData, detail.newData)
+    ) {
       onMouseMove(lastMouseInfo);
     }
   }
 
   document.addEventListener('mousemove', onMouseMove);
-  camera.addEventListener('componentchanged', onCameraMove);
+  camera.addEventListener('componentchanged', onCameraChange);
 
   // The "unlisten" function
   return _ => {
     document.removeEventListener('mousemove', onMouseMove);
-    camera.removeEventListener('componentchanged', onCameraMove);
+    camera.removeEventListener('componentchanged', onCameraChange);
   };
 }
 
@@ -544,7 +548,9 @@ export default function aframeDraggableComponent(aframe, componentName = COMPONE
    * Draggable component for A-Frame.
    */
   aframe.registerComponent(componentName, {
-    schema: { },
+    schema: {
+      lockToLocalRotation: {default: true},
+    },
 
     /**
      * Called once when component is attached. Generally for initial setup.
