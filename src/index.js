@@ -9,6 +9,16 @@ const DRAG_END_EVENT = 'dragend';
 
 const TIME_TO_KEEP_LOG = 300;
 
+function forceWorldUpdate(threeElement) {
+
+  let element = threeElement;
+  while (element.parent) {
+    element = element.parent;
+  }
+
+  element.updateMatrixWorld(true);
+}
+
 function cameraPositionToVec3(camera, vec3) {
 
   let element = camera;
@@ -35,19 +45,18 @@ function cameraPositionToVec3(camera, vec3) {
 
 }
 
+function localToWorld(THREE, threeCamera, vector) {
+  forceWorldUpdate(threeCamera);
+  return threeCamera.localToWorld(vector);
+}
+
 const {unproject} = (function unprojectFunction() {
 
   let initialized = false;
 
-  let cameraPosition;
-
-  let cameraWorld;
   let matrix;
 
   function initialize(THREE) {
-    cameraPosition = new THREE.Vector3();
-
-    cameraWorld = new THREE.Matrix4();
     matrix = new THREE.Matrix4();
 
     return true;
@@ -57,19 +66,13 @@ const {unproject} = (function unprojectFunction() {
 
     unproject(THREE, vector, camera) {
 
+      const threeCamera = camera.components.camera.camera;
+
       initialized = initialized || initialize(THREE);
 
-      cameraPositionToVec3(camera, cameraPosition);
+      vector.applyProjection(matrix.getInverse(threeCamera.projectionMatrix));
 
-      cameraWorld.identity();
-      cameraWorld.setPosition(cameraPosition);
-
-      matrix.multiplyMatrices(
-        cameraWorld,
-        matrix.getInverse(camera.components.camera.camera.projectionMatrix)
-      );
-
-      return vector.applyProjection(matrix);
+      return localToWorld(THREE, threeCamera, vector);
 
     },
   };
@@ -125,16 +128,20 @@ const {screenCoordsToDirection} = (function screenCoordsToDirectionFunction() {
       // apply camera transformation from near-plane of mouse x/y into 3d space
       // NOTE: This should be replaced with THREE code directly once the aframe bug
       // is fixed:
-      // const projectedVector = new THREE
-      //  .Vector3(mouseX, mouseY, -1)
-      //  .unproject(threeCamera);
+/*
+      cameraPositionToVec3(aframeCamera, cameraPosAsVec3);
+      const {x, y, z} = new THREE
+       .Vector3(mouseX, mouseY, -1)
+       .unproject(aframeCamera.components.camera.camera)
+       .sub(cameraPosAsVec3)
+       .normalize();
+*/
       const projectedVector = unproject(THREE, mousePosAsVec3, aframeCamera);
 
       cameraPositionToVec3(aframeCamera, cameraPosAsVec3);
 
       // Get the unit length direction vector from the camera's position
       const {x, y, z} = projectedVector.sub(cameraPosAsVec3).normalize();
-
       return {x, y, z};
     },
   };
