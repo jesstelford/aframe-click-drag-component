@@ -289,7 +289,7 @@ const {selectItem} = (function selectItemFunction() {
   };
 }());
 
-function dragItem(THREE, element, offset, camera, depth, mouseInfo) {
+function dragItem(THREE, element, offset, camera, depth, mouseInfo, lockToLocalRotation) {
 
   const {x: offsetX, y: offsetY, z: offsetZ} = offset;
   const threeCamera = camera.components.camera.camera;
@@ -300,8 +300,16 @@ function dragItem(THREE, element, offset, camera, depth, mouseInfo) {
   const elementRotationOrder = element.object3D.rotation.order;
 
   const rotationQuaternion = new THREE.Quaternion();
-  const rotationEuler = new THREE.Euler();
+  const rotationEuler = element.object3D.rotation.clone();
+
+  const offsetVector = new THREE.Vector3(offset.x, offset.y, offset.z);
   let lastMouseInfo = mouseInfo;
+
+  const nextRotation = {
+    x: THREE.Math.radToDeg(rotationEuler.x),
+    y: THREE.Math.radToDeg(rotationEuler.y),
+    z: THREE.Math.radToDeg(rotationEuler.z),
+  };
 
   function onMouseMove({clientX, clientY}) {
 
@@ -321,33 +329,35 @@ function dragItem(THREE, element, offset, camera, depth, mouseInfo) {
       depth
     );
 
-    // 1. Store initial element rotation
-    // 2. Store initial camera rotation
-    // 3. Calculate difference in camera rotation, inverted
-    // 4. Add #3 + #1
-    // 5. Set element rotation to #4
+    if (lockToLocalRotation) {
 
-    // Start by rotating backwards from the initial camera rotation
-    const rotationDiff = rotationQuaternion.copy(startCameraRotationInverse)
-      // Then add the current camera rotation
-      .multiply(threeCamera.getWorldQuaternion())
+      // Start by rotating backwards from the initial camera rotation
+      const rotationDiff = rotationQuaternion.copy(startCameraRotationInverse)
+        // Then add the current camera rotation
+        .multiply(threeCamera.getWorldQuaternion());
+
+      // rotate the offset
+      offsetVector.set(offset.x, offset.y, offset.z);
+      offsetVector.applyQuaternion(rotationDiff);
+
       // And correctly offset rotation
-      .multiply(startElementRotation);
+      rotationDiff.multiply(startElementRotation);
+      rotationEuler.setFromQuaternion(rotationDiff, elementRotationOrder);
 
-    rotationEuler.setFromQuaternion(rotationDiff, elementRotationOrder);
+      nextRotation.x = THREE.Math.radToDeg(rotationEuler.x);
+      nextRotation.y = THREE.Math.radToDeg(rotationEuler.y);
+      nextRotation.z = THREE.Math.radToDeg(rotationEuler.z);
+    }
 
-    const nextRotation = {
-      x: THREE.Math.radToDeg(rotationEuler.x),
-      y: THREE.Math.radToDeg(rotationEuler.y),
-      z: THREE.Math.radToDeg(rotationEuler.z),
-    };
-
-    const nextPosition = {x: x - offsetX, y: y - offsetY, z: z - offsetZ};
+    const nextPosition = {x: x - offsetVector.x, y: y - offsetVector.y, z: z - offsetVector.z};
 
     element.emit(DRAG_MOVE_EVENT, {nextPosition, nextRotation, clientX, clientY});
 
     element.setAttribute('position', nextPosition);
-    element.setAttribute('rotation', nextRotation);
+
+    if (lockToLocalRotation) {
+      element.setAttribute('rotation', nextRotation);
+    }
   }
 
   function onCameraChange({detail}) {
@@ -375,7 +385,7 @@ const {initialize, tearDown} = (function closeOverInitAndTearDown() {
   let removeClickListeners;
 
   return {
-    initialize(THREE, componentName) {
+    initialize(THREE, componentName, lockToLocalRotation) {
 
       // TODO: Based on a scene from the element passed in?
       const scene = document.querySelector('a-scene');
@@ -419,7 +429,8 @@ const {initialize, tearDown} = (function closeOverInitAndTearDown() {
             {
               clientX,
               clientY,
-            }
+            },
+            lockToLocalRotation
           );
 
           draggedElement = element;
@@ -536,10 +547,10 @@ const {didMount, didUnmount} = (function getDidMountAndUnmount() {
   const cache = [];
 
   return {
-    didMount(element, THREE, componentName) {
+    didMount(element, THREE, componentName, lockToLocalRotation) {
 
       if (cache.length === 0) {
-        initialize(THREE, componentName);
+        initialize(THREE, componentName, lockToLocalRotation);
       }
 
       if (cache.indexOf(element) === -1) {
@@ -579,6 +590,11 @@ export default function aframeDraggableComponent(aframe, componentName = COMPONE
    */
   aframe.registerComponent(componentName, {
     schema: {
+      /*
+       * @param {bool} [lockToLocalRotation=true] - When dragging the component,
+       * should it be screen locked (true), or should its rotation be left alone
+       * (false).
+       */
       lockToLocalRotation: {default: true},
     },
 
@@ -586,7 +602,7 @@ export default function aframeDraggableComponent(aframe, componentName = COMPONE
      * Called once when component is attached. Generally for initial setup.
      */
     init() {
-      didMount(this, THREE, componentName);
+      didMount(this, THREE, componentName, this.data.lockToLocalRotation);
     },
 
     /**
@@ -618,7 +634,7 @@ export default function aframeDraggableComponent(aframe, componentName = COMPONE
      * Use to continue or add any dynamic or background behavior such as events.
      */
     play() {
-      didMount(this, THREE, componentName);
+      didMount(this, THREE, componentName, this.data.lockToLocalRotation);
     },
   });
 }
