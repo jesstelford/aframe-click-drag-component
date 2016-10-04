@@ -3,9 +3,7 @@
 A Click & Drag component for [A-Frame](https://aframe.io).
 
 Entities with the `click-drag` component can be click and dragged around the 3D
-scene. Even works whle the camera is moving!
-
-_Note: entities are not positioned correctly when the camera is rotated._
+scene. Even works whle the camera is moving or rotating!
 
 ### Events
 

@@ -9,6 +9,16 @@ const DRAG_END_EVENT = 'dragend';
 
 const TIME_TO_KEEP_LOG = 300;
 
+function forceWorldUpdate(threeElement) {
+
+  let element = threeElement;
+  while (element.parent) {
+    element = element.parent;
+  }
+
+  element.updateMatrixWorld(true);
+}
+
 function cameraPositionToVec3(camera, vec3) {
 
   let element = camera;
@@ -35,19 +45,18 @@ function cameraPositionToVec3(camera, vec3) {
 
 }
 
+function localToWorld(THREE, threeCamera, vector) {
+  forceWorldUpdate(threeCamera);
+  return threeCamera.localToWorld(vector);
+}
+
 const {unproject} = (function unprojectFunction() {
 
   let initialized = false;
 
-  let cameraPosition;
-
-  let cameraWorld;
   let matrix;
 
   function initialize(THREE) {
-    cameraPosition = new THREE.Vector3();
-
-    cameraWorld = new THREE.Matrix4();
     matrix = new THREE.Matrix4();
 
     return true;
@@ -57,19 +66,13 @@ const {unproject} = (function unprojectFunction() {
 
     unproject(THREE, vector, camera) {
 
+      const threeCamera = camera.components.camera.camera;
+
       initialized = initialized || initialize(THREE);
 
-      cameraPositionToVec3(camera, cameraPosition);
+      vector.applyProjection(matrix.getInverse(threeCamera.projectionMatrix));
 
-      cameraWorld.identity();
-      cameraWorld.setPosition(cameraPosition);
-
-      matrix.multiplyMatrices(
-        cameraWorld,
-        matrix.getInverse(camera.components.camera.camera.projectionMatrix)
-      );
-
-      return vector.applyProjection(matrix);
+      return localToWorld(THREE, threeCamera, vector);
 
     },
   };
@@ -125,16 +128,20 @@ const {screenCoordsToDirection} = (function screenCoordsToDirectionFunction() {
       // apply camera transformation from near-plane of mouse x/y into 3d space
       // NOTE: This should be replaced with THREE code directly once the aframe bug
       // is fixed:
-      // const projectedVector = new THREE
-      //  .Vector3(mouseX, mouseY, -1)
-      //  .unproject(threeCamera);
+/*
+      cameraPositionToVec3(aframeCamera, cameraPosAsVec3);
+      const {x, y, z} = new THREE
+       .Vector3(mouseX, mouseY, -1)
+       .unproject(aframeCamera.components.camera.camera)
+       .sub(cameraPosAsVec3)
+       .normalize();
+*/
       const projectedVector = unproject(THREE, mousePosAsVec3, aframeCamera);
 
       cameraPositionToVec3(aframeCamera, cameraPosAsVec3);
 
       // Get the unit length direction vector from the camera's position
       const {x, y, z} = projectedVector.sub(cameraPosAsVec3).normalize();
-
       return {x, y, z};
     },
   };
@@ -282,10 +289,27 @@ const {selectItem} = (function selectItemFunction() {
   };
 }());
 
-function dragItem(THREE, element, offset, camera, depth, mouseInfo) {
+function dragItem(THREE, element, offset, camera, depth, mouseInfo, lockToLocalRotation) {
 
   const {x: offsetX, y: offsetY, z: offsetZ} = offset;
+  const threeCamera = camera.components.camera.camera;
+
+  // Setting up for rotation calculations
+  const startCameraRotationInverse = threeCamera.getWorldQuaternion().inverse();
+  const startElementRotation = element.object3D.getWorldQuaternion();
+  const elementRotationOrder = element.object3D.rotation.order;
+
+  const rotationQuaternion = new THREE.Quaternion();
+  const rotationEuler = element.object3D.rotation.clone();
+
+  const offsetVector = new THREE.Vector3(offset.x, offset.y, offset.z);
   let lastMouseInfo = mouseInfo;
+
+  const nextRotation = {
+    x: THREE.Math.radToDeg(rotationEuler.x),
+    y: THREE.Math.radToDeg(rotationEuler.y),
+    z: THREE.Math.radToDeg(rotationEuler.z),
+  };
 
   function onMouseMove({clientX, clientY}) {
 
@@ -305,26 +329,53 @@ function dragItem(THREE, element, offset, camera, depth, mouseInfo) {
       depth
     );
 
-    const nextPosition = {x: x - offsetX, y: y - offsetY, z: z - offsetZ};
+    if (lockToLocalRotation) {
 
-    element.emit(DRAG_MOVE_EVENT, {nextPosition, clientX, clientY});
+      // Start by rotating backwards from the initial camera rotation
+      const rotationDiff = rotationQuaternion.copy(startCameraRotationInverse)
+        // Then add the current camera rotation
+        .multiply(threeCamera.getWorldQuaternion());
+
+      // rotate the offset
+      offsetVector.set(offset.x, offset.y, offset.z);
+      offsetVector.applyQuaternion(rotationDiff);
+
+      // And correctly offset rotation
+      rotationDiff.multiply(startElementRotation);
+      rotationEuler.setFromQuaternion(rotationDiff, elementRotationOrder);
+
+      nextRotation.x = THREE.Math.radToDeg(rotationEuler.x);
+      nextRotation.y = THREE.Math.radToDeg(rotationEuler.y);
+      nextRotation.z = THREE.Math.radToDeg(rotationEuler.z);
+    }
+
+    const nextPosition = {x: x - offsetVector.x, y: y - offsetVector.y, z: z - offsetVector.z};
+
+    element.emit(DRAG_MOVE_EVENT, {nextPosition, nextRotation, clientX, clientY});
 
     element.setAttribute('position', nextPosition);
+
+    if (lockToLocalRotation) {
+      element.setAttribute('rotation', nextRotation);
+    }
   }
 
-  function onCameraMove({detail}) {
-    if (detail.name === 'position' && !deepEqual(detail.oldData, detail.newData)) {
+  function onCameraChange({detail}) {
+    if (
+      (detail.name === 'position' || detail.name === 'rotation')
+      && !deepEqual(detail.oldData, detail.newData)
+    ) {
       onMouseMove(lastMouseInfo);
     }
   }
 
   document.addEventListener('mousemove', onMouseMove);
-  camera.addEventListener('componentchanged', onCameraMove);
+  camera.addEventListener('componentchanged', onCameraChange);
 
   // The "unlisten" function
   return _ => {
     document.removeEventListener('mousemove', onMouseMove);
-    camera.removeEventListener('componentchanged', onCameraMove);
+    camera.removeEventListener('componentchanged', onCameraChange);
   };
 }
 
@@ -334,7 +385,7 @@ const {initialize, tearDown} = (function closeOverInitAndTearDown() {
   let removeClickListeners;
 
   return {
-    initialize(THREE, componentName) {
+    initialize(THREE, componentName, lockToLocalRotation) {
 
       // TODO: Based on a scene from the element passed in?
       const scene = document.querySelector('a-scene');
@@ -378,7 +429,8 @@ const {initialize, tearDown} = (function closeOverInitAndTearDown() {
             {
               clientX,
               clientY,
-            }
+            },
+            lockToLocalRotation
           );
 
           draggedElement = element;
@@ -495,10 +547,10 @@ const {didMount, didUnmount} = (function getDidMountAndUnmount() {
   const cache = [];
 
   return {
-    didMount(element, THREE, componentName) {
+    didMount(element, THREE, componentName, lockToLocalRotation) {
 
       if (cache.length === 0) {
-        initialize(THREE, componentName);
+        initialize(THREE, componentName, lockToLocalRotation);
       }
 
       if (cache.indexOf(element) === -1) {
@@ -537,13 +589,20 @@ export default function aframeDraggableComponent(aframe, componentName = COMPONE
    * Draggable component for A-Frame.
    */
   aframe.registerComponent(componentName, {
-    schema: { },
+    schema: {
+      /*
+       * @param {bool} [lockToLocalRotation=true] - When dragging the component,
+       * should it be screen locked (true), or should its rotation be left alone
+       * (false).
+       */
+      lockToLocalRotation: {default: true},
+    },
 
     /**
      * Called once when component is attached. Generally for initial setup.
      */
     init() {
-      didMount(this, THREE, componentName);
+      didMount(this, THREE, componentName, this.data.lockToLocalRotation);
     },
 
     /**
@@ -575,7 +634,7 @@ export default function aframeDraggableComponent(aframe, componentName = COMPONE
      * Use to continue or add any dynamic or background behavior such as events.
      */
     play() {
-      didMount(this, THREE, componentName);
+      didMount(this, THREE, componentName, this.data.lockToLocalRotation);
     },
   });
 }

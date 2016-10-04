@@ -39,6 +39,7 @@
   "devDependencies": {
     "aframe": "^0.3.0",
     "aframe-extras": "^2.5.3",
+    "aframe-keyboard-controls": "github:jesstelford/aframe-keyboard-controls#fps-mode",
     "babel-cli": "^6.14.0",
     "babel-plugin-transform-object-rest-spread": "^6.8.0",
     "babel-preset-es2015": "^6.9.0",
