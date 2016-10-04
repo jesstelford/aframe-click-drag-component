@@ -6,4 +6,3 @@ import clickDragComponent from '../src/index';
 extras.physics.registerAll(aframe);
 aframe.registerComponent('keyboard-controls', keyboardControls);
 clickDragComponent(aframe);
-

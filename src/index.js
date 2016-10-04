@@ -360,6 +360,10 @@ function dragItem(THREE, element, offset, camera, depth, mouseInfo, lockToLocalR
     }
   }
 
+  function onTouchMove({changedTouches: [touchInfo]}) {
+    onMouseMove(touchInfo);
+  }
+
   function onCameraChange({detail}) {
     if (
       (detail.name === 'position' || detail.name === 'rotation')
@@ -370,11 +374,13 @@ function dragItem(THREE, element, offset, camera, depth, mouseInfo, lockToLocalR
   }
 
   document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('touchmove', onTouchMove);
   camera.addEventListener('componentchanged', onCameraChange);
 
   // The "unlisten" function
   return _ => {
     document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('touchmove', onTouchMove);
     camera.removeEventListener('componentchanged', onCameraChange);
   };
 }
@@ -512,6 +518,14 @@ const {initialize, tearDown} = (function closeOverInitAndTearDown() {
         removeDragListeners = undefined;
       }
 
+      function onTouchStart({changedTouches: [touchInfo]}) {
+        onMouseDown(touchInfo);
+      }
+
+      function onTouchEnd({changedTouches: [touchInfo]}) {
+        onMouseUp(touchInfo);
+      }
+
       function run() {
 
         camera = scene.camera.el;
@@ -520,9 +534,15 @@ const {initialize, tearDown} = (function closeOverInitAndTearDown() {
         document.addEventListener('mousedown', onMouseDown);
         document.addEventListener('mouseup', onMouseUp);
 
+        document.addEventListener('touchstart', onTouchStart);
+        document.addEventListener('touchend', onTouchEnd);
+
         removeClickListeners = _ => {
           document.removeEventListener('mousedown', onMouseDown);
           document.removeEventListener('mouseup', onMouseUp);
+
+          document.removeEventListener('touchstart', onTouchStart);
+          document.removeEventListener('touchend', onTouchEnd);
         };
 
       }
