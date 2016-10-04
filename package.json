@@ -5,7 +5,7 @@
   "main": "lib/index.js",
   "browser": "dist/aframe-click-drag-component.min.js",
   "scripts": {
-    "build-example": "browserify examples/main.js --debug --verbose -g uglifyify -t babelify -t [envify --NODE_ENV development ] -o examples/build.js",
+    "build-example": "browserify examples/main.js --verbose -t babelify -t uglifyify -t [envify --NODE_ENV development ] > examples/build.js",
     "build-lib": "mkdir -p lib && babel src/index.js -o lib/index.js",
     "dist": "browserify src/index.js --verbose --debug --standalone registerAframeClickDragComponent -g uglifyify -t [ rollupify --config rollup.config.js ] -t babelify -t [envify --NODE_ENV production ] | exorcist dist/out.map > dist/out.js && uglifyjs dist/out.js --screw-ie8 -c -m --in-source-map dist/out.map --source-map dist/aframe-click-drag-component.min.js.map --source-map-url aframe-click-drag-component.min.js.map > dist/aframe-click-drag-component.min.js && rm dist/out*",
     "test": "npm run test:lint",
