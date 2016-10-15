@@ -3,7 +3,6 @@
   "version": "1.3.0",
   "description": "Click & Drag component for A-Frame.",
   "main": "lib/index.js",
-  "browser": "dist/aframe-click-drag-component.min.js",
   "scripts": {
     "build-example": "browserify examples/main.js --verbose -t babelify -t uglifyify -t [envify --NODE_ENV development ] > examples/build.js",
     "build-lib": "mkdir -p lib && babel src/index.js -o lib/index.js",
@@ -39,7 +38,7 @@
   "devDependencies": {
     "aframe": "^0.3.0",
     "aframe-extras": "^2.5.3",
-    "aframe-keyboard-controls": "github:jesstelford/aframe-keyboard-controls#fps-mode",
+    "aframe-keyboard-controls": "^1.2.1",
     "babel-cli": "^6.14.0",
     "babel-plugin-transform-object-rest-spread": "^6.8.0",
     "babel-preset-es2015": "^6.9.0",
