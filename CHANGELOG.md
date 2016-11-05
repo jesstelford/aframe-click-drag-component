@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Support click and drag for children of entities and the camera
 
+### Removed
+
+- Removed `lockToLocalRotation` option. It is hard coded to `true` now.
+
 ## [1.3.3][] - 2016-11-05
 
 ### Fixed
