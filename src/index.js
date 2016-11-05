@@ -33,6 +33,7 @@ function someParent(element, lambda) {
       return true;
     }
   }
+  return false;
 }
 
 function cameraPositionToVec3(camera, vec3) {
