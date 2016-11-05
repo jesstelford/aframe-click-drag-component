@@ -1,6 +1,6 @@
 {
   "name": "aframe-click-drag-component",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Click & Drag component for A-Frame.",
   "main": "lib/index.js",
   "scripts": {
