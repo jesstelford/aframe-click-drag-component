@@ -500,6 +500,10 @@ const {didMount, didUnmount} = (function getDidMountAndUnmount() {
 
     function onMouseUp({clientX, clientY}) {
 
+      if (!draggedElement) {
+        return;
+      }
+
       cleanUpPositionLog();
 
       const velocity = {
