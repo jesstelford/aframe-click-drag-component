@@ -291,7 +291,6 @@ const {selectItem} = (function selectItemFunction() {
 
 function dragItem(THREE, element, offset, camera, depth, mouseInfo, lockToLocalRotation) {
 
-  const {x: offsetX, y: offsetY, z: offsetZ} = offset;
   const threeCamera = camera.components.camera.camera;
 
   // Setting up for rotation calculations
