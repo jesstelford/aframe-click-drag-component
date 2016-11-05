@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased][]
 
+### Fixed
+
+- Only emit drag end event after an object dragged, not after every mouse up
+
 ## [1.3.2][] - 2016-11-05
 
 ### Added
