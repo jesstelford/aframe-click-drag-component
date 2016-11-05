@@ -25,14 +25,14 @@
       <script>
         var draggable = document.querySelector('[click-drag]');
         draggable.addEventListener('dragstart', function(dragInfo) {
-          draggable.pause();
+          draggable.components['dynamic-body'].pause();
         });
         draggable.addEventListener('dragend', function(dragInfo) {
           var x = dragInfo.detail.velocity.x;
           var y = dragInfo.detail.velocity.y;
           var z = dragInfo.detail.velocity.z;
 
-          draggable.play();
+          draggable.components['dynamic-body'].play();
           draggable.body.velocity.set(x, y, z);
           console.log('drag end', dragInfo.detail.velocity);
         });

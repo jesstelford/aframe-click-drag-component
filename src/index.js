@@ -386,185 +386,179 @@ function dragItem(THREE, element, offset, camera, depth, mouseInfo, lockToLocalR
 }
 
 // Closure to close over the removal of the event listeners
-const {initialize, tearDown} = (function closeOverInitAndTearDown() {
-
-  let removeClickListeners;
-
-  return {
-    initialize(THREE, componentName, lockToLocalRotation) {
-
-      // TODO: Based on a scene from the element passed in?
-      const scene = document.querySelector('a-scene');
-      // delay loading of this as we're not 100% if the scene has loaded yet or not
-      let camera;
-      let removeDragListeners;
-      let draggedElement;
-      let dragInfo;
-      const positionLog = [];
-
-      function cleanUpPositionLog() {
-        const now = performance.now();
-        while (positionLog.length && now - positionLog[0].time > TIME_TO_KEEP_LOG) {
-          // remove the first element;
-          positionLog.shift();
-        }
-      }
-
-      function onDragged({detail: {nextPosition}}) {
-        // Continuously clean up so we don't get huge logs built up
-        cleanUpPositionLog();
-        positionLog.push({
-          position: Object.assign({}, nextPosition),
-          time: performance.now(),
-        });
-      }
-
-      function onMouseDown({clientX, clientY}) {
-
-        const {depth, offset, element} = selectItem(THREE, componentName, camera, clientX, clientY);
-
-        if (element) {
-          // Can only drag one item at a time, so no need to check if any
-          // listener is already set up
-          let removeDragItemListeners = dragItem(
-            THREE,
-            element,
-            offset,
-            camera,
-            depth,
-            {
-              clientX,
-              clientY,
-            },
-            lockToLocalRotation
-          );
-
-          draggedElement = element;
-
-          dragInfo = {
-            offset: {x: offset.x, y: offset.y, z: offset.z},
-            depth,
-            clientX,
-            clientY,
-          };
-
-          element.emit(DRAG_START_EVENT, dragInfo);
-
-          element.addEventListener(DRAG_MOVE_EVENT, onDragged);
-
-          removeDragListeners = _ => {
-            element.removeEventListener(DRAG_MOVE_EVENT, onDragged);
-            // eslint-disable-next-line no-unused-expressions
-            removeDragItemListeners && removeDragItemListeners();
-            // in case this removal function gets called more than once
-            removeDragItemListeners = null;
-          };
-        }
-      }
-
-      function fitLineToVelocity(dimension) {
-
-        if (positionLog.length < 2) {
-          return 0;
-        }
-
-        const velocities = positionLog
-
-          // Pull out just the x, y, or z values
-          .map(log => ({time: log.time, value: log.position[dimension]}))
-
-          // Then convert that into an array of array pairs [time, value]
-          .reduce((memo, log, index, collection) => {
-
-            // skip the first item (we're looking for pairs)
-            if (index === 0) {
-              return memo;
-            }
-
-            const deltaPosition = log.value - collection[index - 1].value;
-            const deltaTime = (log.time - collection[index - 1].time) / 1000;
-
-            // The new value is the change in position
-            memo.push([log.time, deltaPosition / deltaTime]);
-
-            return memo;
-
-          }, []);
-
-        // Calculate the line function
-        const lineFunction = linearRegressionLine(linearRegression(velocities));
-
-        // Calculate what the point was at the end of the line
-        // ie; the velocity at the time the drag stopped
-        return lineFunction(positionLog[positionLog.length - 1].time);
-      }
-
-      function onMouseUp({clientX, clientY}) {
-
-        cleanUpPositionLog();
-
-        const velocity = {
-          x: fitLineToVelocity('x'),
-          y: fitLineToVelocity('y'),
-          z: fitLineToVelocity('z'),
-        };
-
-        draggedElement.emit(
-          DRAG_END_EVENT,
-          Object.assign({}, dragInfo, {clientX, clientY, velocity})
-        );
-
-        removeDragListeners && removeDragListeners(); // eslint-disable-line no-unused-expressions
-        removeDragListeners = undefined;
-      }
-
-      function onTouchStart({changedTouches: [touchInfo]}) {
-        onMouseDown(touchInfo);
-      }
-
-      function onTouchEnd({changedTouches: [touchInfo]}) {
-        onMouseUp(touchInfo);
-      }
-
-      function run() {
-
-        camera = scene.camera.el;
-
-        // TODO: Attach to canvas?
-        document.addEventListener('mousedown', onMouseDown);
-        document.addEventListener('mouseup', onMouseUp);
-
-        document.addEventListener('touchstart', onTouchStart);
-        document.addEventListener('touchend', onTouchEnd);
-
-        removeClickListeners = _ => {
-          document.removeEventListener('mousedown', onMouseDown);
-          document.removeEventListener('mouseup', onMouseUp);
-
-          document.removeEventListener('touchstart', onTouchStart);
-          document.removeEventListener('touchend', onTouchEnd);
-        };
-
-      }
-
-      if (scene.hasLoaded) {
-        run();
-      } else {
-        scene.addEventListener('loaded', run);
-      }
-
-    },
-
-    tearDown() {
-      removeClickListeners && removeClickListeners(); // eslint-disable-line no-unused-expressions
-      removeClickListeners = undefined;
-    },
-  };
-}());
-
 const {didMount, didUnmount} = (function getDidMountAndUnmount() {
 
+  let removeClickListeners;
+  let removeDragListeners;
   const cache = [];
+
+  function initialize(THREE, componentName, lockToLocalRotation) {
+
+    // TODO: Based on a scene from the element passed in?
+    const scene = document.querySelector('a-scene');
+    // delay loading of this as we're not 100% if the scene has loaded yet or not
+    let camera;
+    let draggedElement;
+    let dragInfo;
+    const positionLog = [];
+
+    function cleanUpPositionLog() {
+      const now = performance.now();
+      while (positionLog.length && now - positionLog[0].time > TIME_TO_KEEP_LOG) {
+        // remove the first element;
+        positionLog.shift();
+      }
+    }
+
+    function onDragged({detail: {nextPosition}}) {
+      // Continuously clean up so we don't get huge logs built up
+      cleanUpPositionLog();
+      positionLog.push({
+        position: Object.assign({}, nextPosition),
+        time: performance.now(),
+      });
+    }
+
+    function onMouseDown({clientX, clientY}) {
+
+      const {depth, offset, element} = selectItem(THREE, componentName, camera, clientX, clientY);
+
+      if (element) {
+        // Can only drag one item at a time, so no need to check if any
+        // listener is already set up
+        let removeDragItemListeners = dragItem(
+          THREE,
+          element,
+          offset,
+          camera,
+          depth,
+          {
+            clientX,
+            clientY,
+          },
+          lockToLocalRotation
+        );
+
+        draggedElement = element;
+
+        dragInfo = {
+          offset: {x: offset.x, y: offset.y, z: offset.z},
+          depth,
+          clientX,
+          clientY,
+        };
+
+        element.addEventListener(DRAG_MOVE_EVENT, onDragged);
+
+        removeDragListeners = _ => {
+          element.removeEventListener(DRAG_MOVE_EVENT, onDragged);
+          // eslint-disable-next-line no-unused-expressions
+          removeDragItemListeners && removeDragItemListeners();
+          // in case this removal function gets called more than once
+          removeDragItemListeners = null;
+        };
+
+        element.emit(DRAG_START_EVENT, dragInfo);
+      }
+    }
+
+    function fitLineToVelocity(dimension) {
+
+      if (positionLog.length < 2) {
+        return 0;
+      }
+
+      const velocities = positionLog
+
+        // Pull out just the x, y, or z values
+        .map(log => ({time: log.time, value: log.position[dimension]}))
+
+        // Then convert that into an array of array pairs [time, value]
+        .reduce((memo, log, index, collection) => {
+
+          // skip the first item (we're looking for pairs)
+          if (index === 0) {
+            return memo;
+          }
+
+          const deltaPosition = log.value - collection[index - 1].value;
+          const deltaTime = (log.time - collection[index - 1].time) / 1000;
+
+          // The new value is the change in position
+          memo.push([log.time, deltaPosition / deltaTime]);
+
+          return memo;
+
+        }, []);
+
+      // Calculate the line function
+      const lineFunction = linearRegressionLine(linearRegression(velocities));
+
+      // Calculate what the point was at the end of the line
+      // ie; the velocity at the time the drag stopped
+      return lineFunction(positionLog[positionLog.length - 1].time);
+    }
+
+    function onMouseUp({clientX, clientY}) {
+
+      cleanUpPositionLog();
+
+      const velocity = {
+        x: fitLineToVelocity('x'),
+        y: fitLineToVelocity('y'),
+        z: fitLineToVelocity('z'),
+      };
+
+      draggedElement.emit(
+        DRAG_END_EVENT,
+        Object.assign({}, dragInfo, {clientX, clientY, velocity})
+      );
+
+      removeDragListeners && removeDragListeners(); // eslint-disable-line no-unused-expressions
+      removeDragListeners = undefined;
+    }
+
+    function onTouchStart({changedTouches: [touchInfo]}) {
+      onMouseDown(touchInfo);
+    }
+
+    function onTouchEnd({changedTouches: [touchInfo]}) {
+      onMouseUp(touchInfo);
+    }
+
+    function run() {
+
+      camera = scene.camera.el;
+
+      // TODO: Attach to canvas?
+      document.addEventListener('mousedown', onMouseDown);
+      document.addEventListener('mouseup', onMouseUp);
+
+      document.addEventListener('touchstart', onTouchStart);
+      document.addEventListener('touchend', onTouchEnd);
+
+      removeClickListeners = _ => {
+        document.removeEventListener('mousedown', onMouseDown);
+        document.removeEventListener('mouseup', onMouseUp);
+
+        document.removeEventListener('touchstart', onTouchStart);
+        document.removeEventListener('touchend', onTouchEnd);
+      };
+
+    }
+
+    if (scene.hasLoaded) {
+      run();
+    } else {
+      scene.addEventListener('loaded', run);
+    }
+
+  }
+
+  function tearDown() {
+    removeClickListeners && removeClickListeners(); // eslint-disable-line no-unused-expressions
+    removeClickListeners = undefined;
+  }
 
   return {
     didMount(element, THREE, componentName, lockToLocalRotation) {
@@ -581,6 +575,9 @@ const {didMount, didUnmount} = (function getDidMountAndUnmount() {
     didUnmount(element) {
 
       const cacheIndex = cache.indexOf(element);
+
+      removeDragListeners && removeDragListeners(); // eslint-disable-line no-unused-expressions
+      removeDragListeners = undefined;
 
       if (cacheIndex === -1) {
         return;
@@ -638,7 +635,7 @@ export default function aframeDraggableComponent(aframe, componentName = COMPONE
      * Generally undoes all modifications to the entity.
      */
     remove() {
-      didUnmount();
+      didUnmount(this);
     },
 
     /**
@@ -646,7 +643,7 @@ export default function aframeDraggableComponent(aframe, componentName = COMPONE
      * Use to stop or remove any dynamic or background behavior such as events.
      */
     pause() {
-      didUnmount();
+      didUnmount(this);
     },
 
     /**

@@ -47,7 +47,7 @@
       <script>
         var draggable = document.querySelector('[click-drag]');
         draggable.addEventListener('dragstart', function(dragInfo) {
-          draggable.pause();
+          draggable.components['dynamic-body'].pause();
         });
         draggable.addEventListener('dragend', function(dragInfo) {
 
@@ -74,7 +74,7 @@
           // This gives the feeling of "tossing" the ball
           rotatedVelocity.applyAxisAngle(rotation, Math.PI / 8);
 
-          draggable.play();
+          draggable.components['dynamic-body'].play();
           draggable.body.velocity.set(rotatedVelocity.x, rotatedVelocity.y, rotatedVelocity.z);
         });
       </script>
