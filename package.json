@@ -12,7 +12,8 @@
     "start": "budo examples/main.js:../build.js --serve build.js --dir examples --port 8000 --live --open -- --debug --verbose -t babelify -t [envify --NODE_ENV development ]",
     "prepublish": "in-publish && npm run dist && npm run build-lib || not-in-publish",
     "preghpages": "npm run build-example && rm -rf gh-pages && mkdir gh-pages && cp -r examples/* gh-pages",
-    "ghpages": "npm run preghpages && ghpages -p gh-pages"
+    "ghpages": "npm run preghpages && ghpages -p gh-pages",
+    "version": "version-changelog CHANGELOG.md && changelog-verify CHANGELOG.md && git add CHANGELOG.md"
   },
   "repository": {
     "type": "git",
@@ -47,6 +48,7 @@
     "browserify": "^13.1.0",
     "browserify-css": "^0.9.1",
     "budo": "^9.2.0",
+    "changelog-verify": "^1.0.4",
     "envify": "^3.4.1",
     "eslint": "^3.2.2",
     "eslint-config-airbnb": "^10.0.0",
@@ -60,7 +62,8 @@
     "rollup-plugin-node-resolve": "^2.0.0",
     "rollupify": "^0.3.4",
     "uglify-js": "^2.7.3",
-    "uglifyify": "^3.0.3"
+    "uglifyify": "^3.0.3",
+    "version-changelog": "^2.0.1"
   },
   "dependencies": {
     "deep-equal": "^1.0.1",
