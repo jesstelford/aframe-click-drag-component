@@ -301,7 +301,7 @@ const {selectItem} = (function selectItemFunction() {
   };
 }());
 
-function dragItem(THREE, element, offset, camera, depth, mouseInfo, lockToLocalRotation) {
+function dragItem(THREE, element, offset, camera, depth, mouseInfo) {
 
   const threeCamera = camera.components.camera.camera;
 
@@ -344,33 +344,30 @@ function dragItem(THREE, element, offset, camera, depth, mouseInfo, lockToLocalR
       depth
     );
 
-    if (lockToLocalRotation) {
 
-      let rotationDiff;
+    let rotationDiff;
 
-      // Start by rotating backwards from the initial camera rotation
-      rotationDiff = rotationQuaternion.copy(startCameraRotationInverse);
+    // Start by rotating backwards from the initial camera rotation
+    rotationDiff = rotationQuaternion.copy(startCameraRotationInverse);
 
-      // rotate the offset
-      offsetVector.set(offset.x, offset.y, offset.z);
+    // rotate the offset
+    offsetVector.set(offset.x, offset.y, offset.z);
 
-      // Then add the current camera rotation
-      rotationDiff = rotationQuaternion.multiply(threeCamera.getWorldQuaternion());
+    // Then add the current camera rotation
+    rotationDiff = rotationQuaternion.multiply(threeCamera.getWorldQuaternion());
 
-      offsetVector.applyQuaternion(rotationDiff);
+    offsetVector.applyQuaternion(rotationDiff);
 
-      if (!isChildOfActiveCamera) {
-        // And correctly offset rotation
-        rotationDiff.multiply(startElementRotation);
+    if (!isChildOfActiveCamera) {
+      // And correctly offset rotation
+      rotationDiff.multiply(startElementRotation);
 
-        rotationEuler.setFromQuaternion(rotationDiff, elementRotationOrder);
-      }
-
-      nextRotation.x = THREE.Math.radToDeg(rotationEuler.x);
-      nextRotation.y = THREE.Math.radToDeg(rotationEuler.y);
-      nextRotation.z = THREE.Math.radToDeg(rotationEuler.z);
-
+      rotationEuler.setFromQuaternion(rotationDiff, elementRotationOrder);
     }
+
+    nextRotation.x = THREE.Math.radToDeg(rotationEuler.x);
+    nextRotation.y = THREE.Math.radToDeg(rotationEuler.y);
+    nextRotation.z = THREE.Math.radToDeg(rotationEuler.z);
 
     const nextPosition = {x: x - offsetVector.x, y: y - offsetVector.y, z: z - offsetVector.z};
 
@@ -393,9 +390,7 @@ function dragItem(THREE, element, offset, camera, depth, mouseInfo, lockToLocalR
 
     element.setAttribute('position', nextPosition);
 
-    if (lockToLocalRotation) {
-      element.setAttribute('rotation', nextRotation);
-    }
+    element.setAttribute('rotation', nextRotation);
   }
 
   function onTouchMove({changedTouches: [touchInfo]}) {
@@ -430,7 +425,7 @@ const {didMount, didUnmount} = (function getDidMountAndUnmount() {
   let removeDragListeners;
   const cache = [];
 
-  function initialize(THREE, componentName, lockToLocalRotation) {
+  function initialize(THREE, componentName) {
 
     // TODO: Based on a scene from the element passed in?
     const scene = document.querySelector('a-scene');
@@ -473,8 +468,7 @@ const {didMount, didUnmount} = (function getDidMountAndUnmount() {
           {
             clientX,
             clientY,
-          },
-          lockToLocalRotation
+          }
         );
 
         draggedElement = element;
@@ -603,10 +597,10 @@ const {didMount, didUnmount} = (function getDidMountAndUnmount() {
   }
 
   return {
-    didMount(element, THREE, componentName, lockToLocalRotation) {
+    didMount(element, THREE, componentName) {
 
       if (cache.length === 0) {
-        initialize(THREE, componentName, lockToLocalRotation);
+        initialize(THREE, componentName);
       }
 
       if (cache.indexOf(element) === -1) {
@@ -648,20 +642,13 @@ export default function aframeDraggableComponent(aframe, componentName = COMPONE
    * Draggable component for A-Frame.
    */
   aframe.registerComponent(componentName, {
-    schema: {
-      /*
-       * @param {bool} [lockToLocalRotation=true] - When dragging the component,
-       * should it be screen locked (true), or should its rotation be left alone
-       * (false).
-       */
-      lockToLocalRotation: {default: true},
-    },
+    schema: {},
 
     /**
      * Called once when component is attached. Generally for initial setup.
      */
     init() {
-      didMount(this, THREE, componentName, this.data.lockToLocalRotation);
+      didMount(this, THREE, componentName);
     },
 
     /**
@@ -693,7 +680,7 @@ export default function aframeDraggableComponent(aframe, componentName = COMPONE
      * Use to continue or add any dynamic or background behavior such as events.
      */
     play() {
-      didMount(this, THREE, componentName, this.data.lockToLocalRotation);
+      didMount(this, THREE, componentName);
     },
   });
 }
