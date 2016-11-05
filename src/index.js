@@ -19,19 +19,31 @@ function forceWorldUpdate(threeElement) {
   element.updateMatrixWorld(true);
 }
 
+function forEachParent(element, lambda) {
+  while (element.attachedToParent) {
+    element = element.parentElement;
+    lambda(element);
+  }
+}
+
+function someParent(element, lambda) {
+  while (element.attachedToParent) {
+    element = element.parentElement;
+    if (lambda(element)) {
+      return true;
+    }
+  }
+}
+
 function cameraPositionToVec3(camera, vec3) {
 
-  let element = camera;
-
   vec3.set(
-    element.components.position.data.x,
-    element.components.position.data.y,
-    element.components.position.data.z
+    camera.components.position.data.x,
+    camera.components.position.data.y,
+    camera.components.position.data.z
   );
 
-  while (element.attachedToParent) {
-
-    element = element.parentElement;
+  forEachParent(camera, element => {
 
     if (element.components && element.components.position) {
       vec3.set(
@@ -41,7 +53,7 @@ function cameraPositionToVec3(camera, vec3) {
       );
     }
 
-  }
+  });
 
 }
 
@@ -310,6 +322,10 @@ function dragItem(THREE, element, offset, camera, depth, mouseInfo, lockToLocalR
     z: THREE.Math.radToDeg(rotationEuler.z),
   };
 
+  const activeCamera = element.sceneEl.systems.camera.activeCameraEl;
+
+  const isChildOfActiveCamera = someParent(element, parent => parent === activeCamera);
+
   function onMouseMove({clientX, clientY}) {
 
     lastMouseInfo = {clientX, clientY};
@@ -330,25 +346,48 @@ function dragItem(THREE, element, offset, camera, depth, mouseInfo, lockToLocalR
 
     if (lockToLocalRotation) {
 
+      let rotationDiff;
+
       // Start by rotating backwards from the initial camera rotation
-      const rotationDiff = rotationQuaternion.copy(startCameraRotationInverse)
-        // Then add the current camera rotation
-        .multiply(threeCamera.getWorldQuaternion());
+      rotationDiff = rotationQuaternion.copy(startCameraRotationInverse);
 
       // rotate the offset
       offsetVector.set(offset.x, offset.y, offset.z);
+
+      // Then add the current camera rotation
+      rotationDiff = rotationQuaternion.multiply(threeCamera.getWorldQuaternion());
+
       offsetVector.applyQuaternion(rotationDiff);
 
-      // And correctly offset rotation
-      rotationDiff.multiply(startElementRotation);
-      rotationEuler.setFromQuaternion(rotationDiff, elementRotationOrder);
+      if (!isChildOfActiveCamera) {
+        // And correctly offset rotation
+        rotationDiff.multiply(startElementRotation);
+
+        rotationEuler.setFromQuaternion(rotationDiff, elementRotationOrder);
+      }
 
       nextRotation.x = THREE.Math.radToDeg(rotationEuler.x);
       nextRotation.y = THREE.Math.radToDeg(rotationEuler.y);
       nextRotation.z = THREE.Math.radToDeg(rotationEuler.z);
+
     }
 
     const nextPosition = {x: x - offsetVector.x, y: y - offsetVector.y, z: z - offsetVector.z};
+
+    // When the element has parents, we need to convert its new world position
+    // into new local position of its parent element
+    if (element.parentEl !== element.sceneEl) {
+
+      // The new world position
+      offsetVector.set(nextPosition.x, nextPosition.y, nextPosition.z);
+
+      // Converted
+      element.parentEl.object3D.worldToLocal(offsetVector);
+
+      nextPosition.x = offsetVector.x;
+      nextPosition.y = offsetVector.y;
+      nextPosition.z = offsetVector.z;
+    }
 
     element.emit(DRAG_MOVE_EVENT, {nextPosition, nextRotation, clientX, clientY});
 

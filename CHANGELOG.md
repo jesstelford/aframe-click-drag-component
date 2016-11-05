@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased][]
 
+### Added
+
+- Support click and drag for children of entities and the camera
+
 ## [1.3.3][] - 2016-11-05
 
 ### Fixed
