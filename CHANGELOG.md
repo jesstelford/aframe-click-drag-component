@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased][]
 
+### Changed
+
+- Simpler, more accurate velocity calculations
+
 ## [2.0.0][] - 2016-11-05
 
 ### Added

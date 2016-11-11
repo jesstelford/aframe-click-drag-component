@@ -1,13 +1,11 @@
 import deepEqual from 'deep-equal';
-import linearRegression from 'simple-statistics/src/linear_regression';
-import linearRegressionLine from 'simple-statistics/src/linear_regression_line';
 
 const COMPONENT_NAME = 'click-drag';
 const DRAG_START_EVENT = 'dragstart';
 const DRAG_MOVE_EVENT = 'dragmove';
 const DRAG_END_EVENT = 'dragend';
 
-const TIME_TO_KEEP_LOG = 300;
+const TIME_TO_KEEP_LOG = 100;
 
 function forceWorldUpdate(threeElement) {
 
@@ -495,41 +493,21 @@ const {didMount, didUnmount} = (function getDidMountAndUnmount() {
       }
     }
 
-    function fitLineToVelocity(dimension) {
+    function calculateVelocity() {
 
       if (positionLog.length < 2) {
         return 0;
       }
 
-      const velocities = positionLog
+      const start = positionLog[positionLog.length - 1];
+      const end = positionLog[0];
 
-        // Pull out just the x, y, or z values
-        .map(log => ({time: log.time, value: log.position[dimension]}))
-
-        // Then convert that into an array of array pairs [time, value]
-        .reduce((memo, log, index, collection) => {
-
-          // skip the first item (we're looking for pairs)
-          if (index === 0) {
-            return memo;
-          }
-
-          const deltaPosition = log.value - collection[index - 1].value;
-          const deltaTime = (log.time - collection[index - 1].time) / 1000;
-
-          // The new value is the change in position
-          memo.push([log.time, deltaPosition / deltaTime]);
-
-          return memo;
-
-        }, []);
-
-      // Calculate the line function
-      const lineFunction = linearRegressionLine(linearRegression(velocities));
-
-      // Calculate what the point was at the end of the line
-      // ie; the velocity at the time the drag stopped
-      return lineFunction(positionLog[positionLog.length - 1].time);
+      const deltaTime = 1000 / (start.time - end.time);
+      return {
+        x: (start.position.x - end.position.x) * deltaTime, // m/s
+        y: (start.position.y - end.position.y) * deltaTime, // m/s
+        z: (start.position.z - end.position.z) * deltaTime, // m/s
+      };
     }
 
     function onMouseUp({clientX, clientY}) {
@@ -540,11 +518,7 @@ const {didMount, didUnmount} = (function getDidMountAndUnmount() {
 
       cleanUpPositionLog();
 
-      const velocity = {
-        x: fitLineToVelocity('x'),
-        y: fitLineToVelocity('y'),
-        z: fitLineToVelocity('z'),
-      };
+      const velocity = calculateVelocity();
 
       draggedElement.emit(
         DRAG_END_EVENT,

@@ -66,8 +66,7 @@
     "version-changelog": "^2.0.1"
   },
   "dependencies": {
-    "deep-equal": "^1.0.1",
-    "simple-statistics": "^2.1.0"
+    "deep-equal": "^1.0.1"
   },
   "babel": {
     "presets": [

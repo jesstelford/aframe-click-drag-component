@@ -4,13 +4,13 @@
     <script src="../build.js"></script>
   </head>
   <body>
-    <a-scene physics="debug: true">
+    <a-scene physics="debug: true; gravity: -20">
 
       <a-sphere
         click-drag
-        dynamic-body="mass: 100"
+        dynamic-body="mass: 10"
         position="0 3 -1"
-        radius="1.25"
+        radius="1"
         color="#EF2D5E"
       >
       </a-sphere>
@@ -51,9 +51,9 @@
         });
         draggable.addEventListener('dragend', function(dragInfo) {
 
-          // We're dealing with a very heavy ball (mass: 100), so we want to
+          // We're dealing with a very heavy ball (mass: 10), so we want to
           // reduce the velocity a little
-          var velocityDamp = 0.3;
+          var velocityDamp = 0.5;
 
           var camera = draggable.sceneEl.camera;
 
