@@ -36,6 +36,16 @@ Emitted with the following info:
 - `clientX` - the final mouse event's `clientX` value
 - `clientY` - the final mouse event's `clientY` value
 
+### Applying click-drag conditionally
+You can conditionally apply `click-drag` behaviors by specifying an `enabled`
+attribute in your `click-drag` property:
+
+```javascript
+...
+<a-sphere click-drag="enabled: false" position="0 1.25 -1" radius="1.25" color="#EF2D5E"></a-sphere>
+...
+```
+
 ### Installation
 
 #### Browser
