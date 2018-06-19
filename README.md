@@ -1,4 +1,4 @@
-# Looking for maaintainers
+# Looking for maintainers
 
 I have recently [started a new business](https://mobile.twitter.com/ceteio), which means I no longer have time to maintain this project.
 
