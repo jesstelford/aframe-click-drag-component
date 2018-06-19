@@ -1,3 +1,9 @@
+# Looking for maaintainers
+
+I have recently [started a new business](https://mobile.twitter.com/ceteio), which means I no longer have time to maintain this project.
+
+Please [reach out](https://github.com/jesstelford) if you are interested in updating this component to the latest versions of aframe, merging the pending PRs, and resolving the list of issues ❤️
+
 # aframe-click-drag-component
 
 A Click & Drag component for [A-Frame](https://aframe.io).
