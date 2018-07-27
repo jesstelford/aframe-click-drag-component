@@ -89,19 +89,6 @@ const {unproject} = (function unprojectFunction() {
   };
 }());
 
-function clientCoordsTo3DCanvasCoords(
-  clientX,
-  clientY,
-  offsetX,
-  offsetY,
-  clientWidth,
-  clientHeight
-) {
-  return {
-    x: (((clientX - offsetX) / clientWidth) * 2) - 1,
-    y: (-((clientY - offsetY) / clientHeight) * 2) + 1,
-  };
-}
 
 const {screenCoordsToDirection} = (function screenCoordsToDirectionFunction() {
 
@@ -127,28 +114,15 @@ const {screenCoordsToDirection} = (function screenCoordsToDirectionFunction() {
       initialized = initialized || initialize(THREE);
 
       // scale mouse coordinates down to -1 <-> +1
-      const {x: mouseX, y: mouseY} = clientCoordsTo3DCanvasCoords(
-        clientX, clientY,
-        0, 0, // TODO: Replace with canvas position
-        window.innerWidth,
-        window.innerHeight
-      );
+      const scene = document.querySelector('a-scene');
+      const bounds = scene.canvas.getBoundingClientRect();
+      const left = clientX - bounds.left;
+      const top = clientY - bounds.top;
+      const mouseX = ((left / bounds.width) * 2) - 1;
+      const mouseY = -((top / bounds.height) * 2) + 1;
 
       mousePosAsVec3.set(mouseX, mouseY, -1);
-
-      // apply camera transformation from near-plane of mouse x/y into 3d space
-      // NOTE: This should be replaced with THREE code directly once the aframe bug
-      // is fixed:
-/*
-      cameraPositionToVec3(aframeCamera, cameraPosAsVec3);
-      const {x, y, z} = new THREE
-       .Vector3(mouseX, mouseY, -1)
-       .unproject(aframeCamera.components.camera.camera)
-       .sub(cameraPosAsVec3)
-       .normalize();
-*/
       const projectedVector = unproject(THREE, mousePosAsVec3, aframeCamera);
-
       cameraPositionToVec3(aframeCamera, cameraPosAsVec3);
 
       // Get the unit length direction vector from the camera's position
