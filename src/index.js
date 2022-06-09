@@ -456,6 +456,11 @@ const {didMount, didUnmount} = (function getDidMountAndUnmount() {
       const {depth, offset, element} = selectItem(THREE, componentName, camera, clientX, clientY);
 
       if (element) {
+        // If click-drag is not enabled, return.
+        if (element.getAttribute('click-drag').enabled === 'false') {
+          return;
+        }
+
         // Can only drag one item at a time, so no need to check if any
         // listener is already set up
         let removeDragItemListeners = dragItem(
