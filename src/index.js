@@ -81,7 +81,7 @@ const {unproject} = (function unprojectFunction() {
 
       initialized = initialized || initialize(THREE);
 
-      vector.applyProjection(matrix.getInverse(threeCamera.projectionMatrix));
+      vector.applyMatrix4(matrix.getInverse(threeCamera.projectionMatrix));
 
       return localToWorld(THREE, threeCamera, vector);
 
